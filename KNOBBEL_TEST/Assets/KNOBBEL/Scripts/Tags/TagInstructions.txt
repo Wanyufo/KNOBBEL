@@ -1,0 +1,23 @@
+﻿
+
+### New Tag ###
+Simply add the new Tag to it's corresponding TagGroup in ""### Tag Group Enums ###" in the TagManager
+
+
+### New Tag Groups ###
+To add a new Tag Group, do the Following:
+    1) Add a new Tag Group Enum in the TagManager file ( after ### Tag Group Enums ###) 
+    2) Add the name of the new Tag Group to the enum "TagGroup"
+    3) Duplicate the GenericTag.cs Script
+        3.1) Rename the file to <YourTagName>Tag.cs
+        3.2) Find-and-Replace "GenericTag" with "<YourTagName>Tag"
+        3.3) Uncomment the content of the new class in <YourTagName>Tag.cs
+    
+    You can now add the New Tag Script to any GameObject and there select the Tag you want
+    
+    make sure that the Name of the Tag Group Enum (step 1) and the entry in the TagGroup (step 2) are identical
+    
+    nevermind, using Strings now XD so we skip step 2
+    
+    Any Enum can now be used as tag by making a copy of the genericTag.cs and changing the filename and the Serialized Field type
+    
