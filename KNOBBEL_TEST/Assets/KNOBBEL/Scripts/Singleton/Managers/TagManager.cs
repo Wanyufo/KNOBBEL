@@ -48,7 +48,7 @@ namespace Gm
             Ground,
             Enemy,
             PlayerGroundCheck,
-            
+            DeathZone,
         }
 
   

@@ -12,12 +12,42 @@ namespace KNOBBEL.Scripts.Testers
         // down dash/slam
         // faster falling / maybe even higher gravity generally
         // slo mo ability  -  give user time to adjust
-        // switch to velocity control instead of force. is snappier
-        [SerializeField] float groundSpeed = 10f;
-        [SerializeField] float jumpForce = 10f;
+        [SerializeField] private float groundSpeed = 10f;
+        [SerializeField] private float airSpeed = 10f;
+        [SerializeField] private float jumpSpeed = 10f;
+        [SerializeField] private float slamSpeed = 20f;
+        [SerializeField] private float gravity = 10f;
+        [SerializeField] private float fallMultiplier = 1.75f;
         private Rigidbody2D _rigidbody2D;
         private Collider2D _groundCheckCollider;
         private int _groundLayerMask;
+        private Vector2 _speed;
+
+        private Vector3 _resetPosition;
+
+        public void SetResetPosition(Vector3 resetPosition)
+        {
+            _resetPosition = resetPosition;
+        }
+
+        private void Death()
+        {
+            transform.position = _resetPosition;
+            _speed = Vector2.zero;
+            _rigidbody2D.velocity = Vector2.zero;
+        }
+
+        // handle collision with DeathZone
+        private void OnTriggerEnter2D(Collider2D other)
+        {
+            if (other.TryGetComponent<MiscTagger>(out MiscTagger tagger))
+            {
+                if (tagger.GetTag().Equals(TagManager.MiscTags.DeathZone))
+                {
+                    Death();
+                }
+            }
+        }
 
         public bool IsOnGround { get; protected set; }
 
@@ -26,10 +56,14 @@ namespace KNOBBEL.Scripts.Testers
         private Vector2 _move = Vector2.zero;
 
 
-        // TODO Calculate all the gravity etc manually
         private void Start()
         {
             _rigidbody2D = GetComponent<Rigidbody2D>();
+            // we do our own gravity because that gives us more control
+            // _rigidbody2D.bodyType = RigidbodyType2D.Kinematic;
+            _rigidbody2D.gravityScale = 0;
+
+            SetResetPosition(transform.position);
             
             // TODO rewrite this, it's ugly as hell
             _groundCheckCollider = GM.I.TagManager.GetObjectsWithTag(TagManager.MiscTags.PlayerGroundCheck).Select(x =>
@@ -46,14 +80,30 @@ namespace KNOBBEL.Scripts.Testers
                 }
             }).First();
             Debug.Log("_groundCheckCollider = " + _groundCheckCollider.name);
-            _groundLayerMask = Physics2D.GetLayerCollisionMask(LayerMask.NameToLayer("Ground"));
+            _groundLayerMask = LayerMask.GetMask("Ground");
         }
 
         public void OnMove(InputValue inputValue)
         {
             Vector2 inputDir = inputValue.Get<Vector2>();
-            Vector2 nonUpInputDir = new Vector2(inputDir.x > 0 ? 1 : inputDir.x < 0 ? -1 : 0,
-                inputDir.y > 0 ? 0 : inputDir.y);
+            // we set the input to be left or right full. and to be not up but down full if down is pressed
+            float x = inputDir.x switch
+            {
+                > 0 => 1,
+                < 0 => -1,
+                _ => 0
+            };
+
+            float y = inputDir.y switch
+            {
+                > 0 => 0,
+                < 0 => -1,
+                _ => 0
+            };
+
+            Vector2 nonUpInputDir = new Vector2(x, y);
+            // Vector2 nonUpInputDir = new Vector2(inputDir.x > 0 ? 1 : inputDir.x < 0 ? -1 : 0,
+            //     inputDir.y > 0 ? 0 : inputDir.y < 0 ? -1 : 0);
             _move = nonUpInputDir;
             //    Debug.Log("_move = " + "(" + _move.x + "," + _move.y + ")");
         }
@@ -67,27 +117,41 @@ namespace KNOBBEL.Scripts.Testers
         private void FixedUpdate()
         {
             IsOnGround = _groundCheckCollider.IsTouchingLayers(_groundLayerMask);
-            // Debug.Log("Ground: " + IsOnGround);
-            Vector2 speed = Vector2.zero;
-
-            speed += _move * groundSpeed;
-
-            if (_jump)
+            _speed = _rigidbody2D.velocity;
+            // horizontal movement
+            if (IsOnGround)
             {
-                if (IsOnGround)
-                {
-                    // apply jump force to rigidbody
-                    // Debug.Log("Jumping");
-                    speed.y += jumpForce;
-                }
-
-                _jump = false;
+                _speed.x = _move.x * groundSpeed;
+            }
+            else
+            {
+                _speed.x = _move.x * airSpeed;
             }
 
-            // Debug.Log("Speed: " + speed);
-            // ToDO currently a very quick multi jump (eg when touching a wall) is possibe.
-            _rigidbody2D.velocity = new Vector2(speed.x, _rigidbody2D.velocity.y + speed.y);
-            // Debug.Log("Velocity: " + _rigidbody2D.velocity);
+            // vertical movement
+
+            // if we can and we want, we jump
+            // when we are on ground, we ignore all downwards movement, both physical and input
+            // this also means that jumping is a setting of speed, not an addition to it
+            if (IsOnGround)
+            {
+                if (_jump)
+                {
+                    _speed.y = jumpSpeed;
+                }
+            }
+            // else we are in the air. We apply gravity, which is stronger if we are falling. Finally we apply the slam speed if we want to slam
+            else
+            {
+                // apply gravity
+                _speed.y -= gravity * Time.deltaTime * (_speed.y < 0 ? fallMultiplier : 1f);
+                // slam
+                _speed.y += _move.y * slamSpeed;
+            }
+            
+            // apply speed and reset jump flag
+            _rigidbody2D.velocity = _speed;
+            _jump = false;
         }
     }
 }
