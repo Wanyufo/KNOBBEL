@@ -6,38 +6,63 @@ namespace KNOBBEL.Scripts.Testers
 {
     public class ParallaxTester : MonoBehaviour
     {
-        private List<ParallaxObject> _parallaxObjList;
+        [SerializeField] private bool useDeltaParallax = true;
+        private List<(ParallaxObject obj, float xOffset)> _parallaxObjList;
         [SerializeField] private float parallaxFactor = 0.5f;
 
         private Camera _camera;
         private float _previousFrameCameraXPos = 0;
+        private float _initialCameraXPos = 0;
 
         // Start is called before the first frame update
         void Start()
         {
             _camera = Camera.main;
-            _parallaxObjList = FindObjectsOfType<ParallaxObject>().ToList();
+            _parallaxObjList = new List<(ParallaxObject obj, float xOffset)>();
+            var objList = FindObjectsOfType<ParallaxObject>().ToList();
+            _parallaxObjList = objList.Zip(objList.Select(obj => obj.transform.position.x), (obj, x) => (obj, x))
+                .ToList();
+            _initialCameraXPos = _camera.transform.position.x;
+            
+            // TODO move all the parallax objects
         }
 
         // Update is called once per frame
         void Update()
         {
-            float cameraMovement = _camera.transform.position.x - _previousFrameCameraXPos;
-            foreach (ParallaxObject parallaxObject in _parallaxObjList)
+            if (useDeltaParallax)
             {
-                // DO THE PARALLAX EFFECT FOR THIS
-                // problem: like this, objects that are in BG and are far away from the center cant be placed nicely....
-                // ofc. it could move them out by this much on start. 
-                // so they all start at their "logical" place, so their place that they'd have if the cam was right in front of their Privot
+                DeltaParallax();
+            }
+            else
+            {
+                AbsoluteParallax();
+            }
+            _previousFrameCameraXPos = _camera.transform.position.x;
+        }
 
+        private void AbsoluteParallax()
+        {
+            float cameraMovementSinceStart = _camera.transform.position.x - _initialCameraXPos;
 
-                // implement Parallax effect, using the parallaxObject's z position as factor
+            foreach ((ParallaxObject obj, float xOffset) tuple in _parallaxObjList)
+            {
+                Vector3 parallaxPos = tuple.obj.transform.position;
+                parallaxPos.x = cameraMovementSinceStart * tuple.obj.transform.position.z * parallaxFactor + tuple.xOffset;
+                tuple.obj.transform.position = parallaxPos;
+            }
+        }
+
+        private void DeltaParallax()
+        {
+            float cameraMovement = _camera.transform.position.x - _previousFrameCameraXPos;
+            foreach ((ParallaxObject obj, float xOffset) tuple in _parallaxObjList){
+                
                 Vector3 parallaxMovement = Vector3.zero;
-                parallaxMovement.x = cameraMovement * parallaxObject.transform.position.z * parallaxFactor;
-                parallaxObject.transform.position += parallaxMovement;
+                parallaxMovement.x = cameraMovement * tuple.obj.transform.position.z * parallaxFactor;
+                tuple.obj.transform.position += parallaxMovement;
             }
 
-            _previousFrameCameraXPos = _camera.transform.position.x;
         }
     }
 }
