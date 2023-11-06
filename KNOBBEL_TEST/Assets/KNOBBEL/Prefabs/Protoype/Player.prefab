@@ -133,7 +133,7 @@ GameObject:
   - component: {fileID: 3955645095489697114}
   - component: {fileID: 8054761393335955221}
   m_Layer: 6
-  m_Name: PlayerGroundcheckObject
+  m_Name: PlayerGroundcheck
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -593,6 +593,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d8072ba204c597649ab22cc103fc1698, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  visuals: {fileID: 1447787277054399195}
+  groundCheckCollider: {fileID: 7694557643519339453}
+  climbCheckCollider: {fileID: 3574386742604587678}
   groundSpeed: 15
   airSpeed: 15
   jumpSpeed: 23

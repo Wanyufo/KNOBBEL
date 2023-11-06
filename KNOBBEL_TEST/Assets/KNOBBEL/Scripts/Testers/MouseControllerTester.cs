@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Gm;
 using Unity.VisualScripting;
@@ -13,6 +14,13 @@ namespace KNOBBEL.Scripts.Testers
         // down dash/slam
         // faster falling / maybe even higher gravity generally
         // slo mo ability  -  give user time to adjust
+        [Header("Components")] [SerializeField]
+        private GameObject visuals;
+
+        [SerializeField] private Collider2D groundCheckCollider;
+        [SerializeField] private Collider2D climbCheckCollider;
+
+
         [Header("Movement Mechanics")] [SerializeField]
         private float groundSpeed = 10f;
 
@@ -33,6 +41,8 @@ namespace KNOBBEL.Scripts.Testers
         private Vector2 _speed;
 
         private Vector3 _resetPosition;
+
+        private List<Vector3> _climbingSurfaceRotations = new List<Vector3>();
 
         public void SetResetPosition(Vector3 resetPosition)
         {
@@ -61,7 +71,6 @@ namespace KNOBBEL.Scripts.Testers
 
         public bool IsOnGround { get; protected set; }
         public bool IsClimbing { get; protected set; }
-
         public bool IsInAir => !IsOnGround && !IsClimbing;
 
         // Set to false once executed
@@ -77,53 +86,11 @@ namespace KNOBBEL.Scripts.Testers
         {
             _rigidbody2D = GetComponent<Rigidbody2D>();
             // we do our own gravity because that gives us more control
-            // _rigidbody2D.bodyType = RigidbodyType2D.Kinematic;
             _rigidbody2D.gravityScale = 0;
-
             SetResetPosition(transform.position);
-
-            // TODO rewrite this, it's ugly as hell
-            _groundCheckCollider = GM.I.TagManager.GetObjectsWithTag(TagManager.MiscTags.PlayerGroundCheck).Select(x =>
-            {
-                MiscTagger tagger = (MiscTagger) x;
-                // check that the tagger is a child of this object
-                if (tagger.transform.IsChildOf(this.transform))
-                {
-                    return tagger.GetComponent<Collider2D>();
-                }
-                else
-                {
-                    throw new System.Exception("PlayerGroundCheck is not a child of the Player");
-                }
-            }).First();
-            _climbCheckCollider = GM.I.TagManager.GetObjectsWithTag(TagManager.MiscTags.PlayerClimbCheck).Select(x =>
-            {
-                MiscTagger tagger = (MiscTagger) x;
-                // check that the tagger is a child of this object
-                if (tagger.transform.IsChildOf(this.transform))
-                {
-                    return tagger.GetComponent<Collider2D>();
-                }
-                else
-                {
-                    throw new System.Exception("PlayerClimbCheck is not a child of the Player");
-                }
-            }).First();
-
-            _visuals = GM.I.TagManager.GetObjectsWithTag(TagManager.MiscTags.PlayerVisuals).Select(x =>
-            {
-                MiscTagger tagger = (MiscTagger) x;
-                // check that the tagger is a child of this object
-                if (tagger.transform.IsChildOf(this.transform))
-                {
-                    return tagger.gameObject;
-                }
-                else
-                {
-                    throw new System.Exception("PlayerVisuals is not a child of the Player");
-                }
-            }).First();
-
+            _groundCheckCollider = groundCheckCollider;
+            _climbCheckCollider = climbCheckCollider;
+            _visuals = visuals;
             _groundLayerMask = LayerMask.GetMask("Ground");
             _climbableLayerMask = LayerMask.GetMask("Climbable");
         }
@@ -160,7 +127,6 @@ namespace KNOBBEL.Scripts.Testers
         public void OnJump(InputValue inputValue)
         {
             _jump = inputValue.isPressed;
-            // Debug.Log("Jump: " + inputValue.isPressed);
         }
 
         private void Update()
@@ -168,6 +134,15 @@ namespace KNOBBEL.Scripts.Testers
             if (_move.x != 0)
             {
                 SetVisualDirection(_move.x);
+            }
+
+            if (IsClimbing && !IsOnGround)
+            {
+                // TODO implement rotation to match climbing surface
+            }
+            else
+            {
+                // TODO reset rotation
             }
         }
 
