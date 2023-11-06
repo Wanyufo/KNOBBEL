@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Gm;
 using Unity.VisualScripting;
@@ -12,16 +13,21 @@ namespace KNOBBEL.Scripts.Testers
         // down dash/slam
         // faster falling / maybe even higher gravity generally
         // slo mo ability  -  give user time to adjust
-        [SerializeField] private float groundSpeed = 10f;
+        [Header("Movement Mechanics")] [SerializeField]
+        private float groundSpeed = 10f;
+
         [SerializeField] private float airSpeed = 10f;
         [SerializeField] private float jumpSpeed = 10f;
         [SerializeField] private float climbSpeed = 10f;
         [SerializeField] private float slamSpeed = 20f;
         [SerializeField] private float gravity = 10f;
         [SerializeField] private float fallMultiplier = 1.75f;
-        private Rigidbody2D _rigidbody2D;
+        [Space] [Header("Visuals")] private Rigidbody2D _rigidbody2D;
         private Collider2D _groundCheckCollider;
         private Collider2D _climbCheckCollider;
+        private GameObject _visuals;
+
+
         private int _groundLayerMask;
         private int _climbableLayerMask;
         private Vector2 _speed;
@@ -52,6 +58,7 @@ namespace KNOBBEL.Scripts.Testers
             }
         }
 
+
         public bool IsOnGround { get; protected set; }
         public bool IsClimbing { get; protected set; }
 
@@ -59,7 +66,10 @@ namespace KNOBBEL.Scripts.Testers
 
         // Set to false once executed
         private bool _jump = false;
+
         private bool _slam = false;
+
+        // move is a who's values are eiter -1, 0 or 1
         private Vector2 _move = Vector2.zero;
 
 
@@ -99,6 +109,21 @@ namespace KNOBBEL.Scripts.Testers
                     throw new System.Exception("PlayerClimbCheck is not a child of the Player");
                 }
             }).First();
+
+            _visuals = GM.I.TagManager.GetObjectsWithTag(TagManager.MiscTags.PlayerVisuals).Select(x =>
+            {
+                MiscTagger tagger = (MiscTagger) x;
+                // check that the tagger is a child of this object
+                if (tagger.transform.IsChildOf(this.transform))
+                {
+                    return tagger.gameObject;
+                }
+                else
+                {
+                    throw new System.Exception("PlayerVisuals is not a child of the Player");
+                }
+            }).First();
+
             _groundLayerMask = LayerMask.GetMask("Ground");
             _climbableLayerMask = LayerMask.GetMask("Climbable");
         }
@@ -136,6 +161,21 @@ namespace KNOBBEL.Scripts.Testers
         {
             _jump = inputValue.isPressed;
             // Debug.Log("Jump: " + inputValue.isPressed);
+        }
+
+        private void Update()
+        {
+            if (_move.x != 0)
+            {
+                SetVisualDirection(_move.x);
+            }
+        }
+
+        private void SetVisualDirection(float direction)
+        {
+            Vector3 scale = _visuals.transform.localScale;
+            scale.x = direction;
+            _visuals.transform.localScale = scale;
         }
 
         private void FixedUpdate()
